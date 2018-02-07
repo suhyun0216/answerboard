@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hk.ans">
+	
+	<select id="testboard" resultType="AnsDto" parameterType="Map">
+		SELECT SEQ, ID, TITLE, CONTENT, REGDATE, REFER, STEP, DEPTH, READCOUNT, DELFLAG FROM ANSWERBOARD 
+		<if test="seq!=null">
+			<where>
+				<include refid="paramseq"/>
+			</where>
+		</if>
+			ORDER BY REFER DESC, STEP ASC
+	</select>
+	<sql id="paramseq">
+		 SEQ = #{seq}
+	</sql>
+	
+	<select id="boardlist" resultType="AnsDto">
+		 SELECT SEQ, ID, TITLE, CONTENT, REGDATE, REFER, STEP, DEPTH, READCOUNT, DELFLAG 
+				 FROM ANSWERBOARD ORDER BY REFER DESC, STEP ASC 
+	</select>
+	<insert id="insertboard" parameterType="AnsDto">
+		INSERT INTO ANSWERBOARD (SEQ, ID, TITLE, CONTENT, REGDATE, REFER, STEP, DEPTH, READCOUNT, DELFLAG)
+			 VALUES(ANSWERBOARD_SEQ.NEXTVAL, #{id}, #{title}, #{content}, SYSDATE,
+				 (SELECT NVL(MAX(REFER)+1,0) FROM ANSWERBOARD), 0, 0, 0, 'N')
+	</insert>
+	<update id="readcount" parameterType="int">
+		UPDATE ANSWERBOARD SET READCOUNT=READCOUNT+1 WHERE SEQ=#{seq}
+	</update>
+	<select id="detailboard" resultType="AnsDto" parameterType="int">
+		SELECT SEQ, ID, TITLE, CONTENT, REGDATE, REFER, STEP, DEPTH, READCOUNT, DELFLAG 
+				 FROM ANSWERBOARD WHERE SEQ = #{seq}
+	</select>
+	<update id="updateboard" parameterType="AnsDto">
+	 	 UPDATE ANSWERBOARD SET TITLE=#{title}, CONTENT=#{content}, REGDATE=SYSDATE WHERE SEQ=#{seq}
+	</update>
+<!-- 	동적쿼리(다이나믹쿼리) 사용할때는 파라미터를  Map으로 전달해야함 -->
+	<update id="muldelboard" parameterType="Map">
+		UPDATE ANSWERBOARD SET DELFLAG = 'Y' WHERE SEQ IN 
+<!-- 	(1,2,3,4)의 문자열 형태로 만들어내야함 
+		for문 (설정한 변수명(키값불러오기 - 길이만큼 실행됨), 하나씩 담을 값의 변수명, 시작할단어 설정 , 끝날단어 설정, seq값마다 넣어줄 단어)-->
+		<foreach collection="seqs" item="seq" open="(" close=")" separator=","> 
+			#{seq}
+		</foreach>
+	</update>
+	<update id="ansupdate" parameterType="AnsDto">
+		UPDATE ANSWERBOARD SET STEP=STEP+1 
+			WHERE REFER = (SELECT REFER FROM ANSWERBOARD WHERE SEQ=#{seq}) AND
+			STEP > (SELECT STEP FROM ANSWERBOARD WHERE SEQ=#{seq})
+	</update>
+	<insert id="ansinsert" parameterType="AnsDto">
+		INSERT INTO ANSWERBOARD VALUES 
+			 (ANSWERBOARD_SEQ.NEXTVAL, #{id}, #{title}, #{content}, SYSDATE, (SELECT REFER FROM ANSWERBOARD WHERE SEQ=#{seq}),
+			 (SELECT STEP FROM ANSWERBOARD WHERE SEQ=#{seq})+1, 
+			 (SELECT DEPTH FROM ANSWERBOARD WHERE SEQ=#{seq})+1, 0,'N')
+	</insert>
+	<select id="detailajax" resultType="AnsDto" parameterType="int">
+		SELECT SEQ, CONTENT FROM ANSWERBOARD WHERE SEQ = #{seq}
+	</select>
+</mapper>
